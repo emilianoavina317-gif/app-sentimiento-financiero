@@ -11,15 +11,16 @@ from zoneinfo import ZoneInfo
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
 # ==========================================
-st.set_page_config(page_title="Terminal de Sentimiento", layout="wide")
+# UI: Título de la pestaña del navegador
+st.set_page_config(page_title="Financial Sentiment Terminal", layout="wide")
 
 # ==========================================
 # 1. EXTRACCIÓN Y FORMATEO DE TIEMPO
 # ==========================================
 def obtener_noticias_yahoo(ticker, limite=30):
     """
-    Se conecta al feed RSS de Yahoo Finance, extrae las noticias directamente
-    y formatea la fecha a la zona horaria de Ciudad de México.
+    Se conecta al feed RSS de Yahoo Finance, extrae las noticias y 
+    formatea la fecha a la zona horaria de Ciudad de México.
     """
     url_rss = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={ticker}&region=US&lang=en-US"
     
@@ -28,31 +29,24 @@ def obtener_noticias_yahoo(ticker, limite=30):
         if not feed.entries:
             return []
     except Exception as e:
-        st.error(f"Error de comunicación con el servidor de datos: {e}")
+        # UI: Error de red
+        st.error(f"Data server communication error: {e}")
         return []
 
     titulares = []
     
     for entrada in feed.entries[:limite]:
-        # ----- LÓGICA DE CONVERSIÓN DE FECHA -----
         try:
-            # 1. Convertimos el texto del RSS a un objeto de tiempo (UTC)
             tiempo_servidor = parsedate_to_datetime(entrada.published)
-            
-            # 2. Transformamos a la zona horaria de CDMX
             tiempo_cdmx = tiempo_servidor.astimezone(ZoneInfo("America/Mexico_City"))
-            
-            # 3. Le damos el formato solicitado: HH:MM:SS dd-mm-aaaa
             fecha_legible = tiempo_cdmx.strftime("%H:%M:%S %d-%m-%Y")
         except Exception:
-            # Si Yahoo llega a mandar un formato raro, mostramos el original para que no falle la app
             fecha_legible = entrada.published
-        # -----------------------------------------
 
         titulares.append({
             "titulo": entrada.title,
             "link": entrada.link,
-            "fecha": fecha_legible  # Guardamos nuestra nueva fecha formateada
+            "fecha": fecha_legible
         })
             
     return titulares
@@ -63,14 +57,15 @@ def obtener_noticias_yahoo(ticker, limite=30):
 @st.cache_resource
 def cargar_modelo_y_tokenizador(ruta_modelo):
     """
-    Carga y mantiene el modelo en memoria. Incluye prevención de errores.
+    Carga y mantiene el modelo en memoria.
     """
     try:
         tokenizer = AutoTokenizer.from_pretrained("ProsusAI/finbert")
         modelo = AutoModelForSequenceClassification.from_pretrained(ruta_modelo)
         return tokenizer, modelo
     except Exception as e:
-        st.error(f"Falla crítica al cargar el modelo: {e}")
+        # UI: Error de carga de Hugging Face
+        st.error(f"Critical failure loading the model: {e}")
         return None, None
 
 # ==========================================
@@ -93,24 +88,27 @@ def clasificar_titular(texto, tokenizer, modelo):
 # ==========================================
 # 4. INTERFAZ GRÁFICA DE USUARIO (UI)
 # ==========================================
-st.title("📊 Terminal de Sentimiento Financiero")
-st.markdown("Analiza el sentimiento de las últimas noticias del mercado en tiempo real.")
+# UI: Títulos principales
+st.title("📊 Financial Sentiment Terminal")
+st.markdown("Analyze the sentiment of the latest market news in real-time.")
 
-# Reemplaza esto con tu ruta real de Hugging Face
+# Ruta final correcta a tu modelo en Hugging Face
 ruta_de_tu_modelo = "JEAR317/finbert-sentimiento-diplomado"
 tokenizer, modelo = cargar_modelo_y_tokenizador(ruta_de_tu_modelo)
 
 if tokenizer and modelo:
-    # Buscador principal (Ejecuta la búsqueda al presionar Enter)
-    ticker_input = st.text_input("🔍 Ingresa un Ticker (Ej. AAPL, TSLA, MSFT) y presiona Enter:", "").upper()
+    # UI: Buscador principal
+    ticker_input = st.text_input("🔍 Enter a Ticker (e.g., AAPL, TSLA, MSFT) and press Enter:", "").upper()
 
     if ticker_input:
-        with st.spinner(f"Analizando el mercado para {ticker_input}..."):
+        # UI: Mensaje de carga
+        with st.spinner(f"Analyzing the market for {ticker_input}..."):
             
             noticias = obtener_noticias_yahoo(ticker_input, limite=30)
             
             if not noticias:
-                st.warning(f"No se encontraron noticias recientes para el ticker {ticker_input}.")
+                # UI: Advertencia sin resultados
+                st.warning(f"No recent news found for the ticker {ticker_input}.")
             else:
                 noticias_bearish = []
                 noticias_bullish = []
@@ -132,7 +130,6 @@ if tokenizer and modelo:
                 with col_bear:
                     st.subheader("📉 Bearish")
                     for noti in noticias_bearish[:3]:
-                        # La fecha ahora se mostrará como: 07:31:02 16-06-2026
                         st.error(f"**[{noti['titulo']}]({noti['link']})** \n*🕒 {noti['fecha']}*")
                         
                 with col_bull:
@@ -145,4 +142,5 @@ if tokenizer and modelo:
                     for noti in noticias_neutral[:3]:
                         st.info(f"**[{noti['titulo']}]({noti['link']})** \n*🕒 {noti['fecha']}*")
 else:
-    st.error("La aplicación no puede continuar debido a una falla al cargar el modelo.")
+    # UI: Falla crítica de inicialización
+    st.error("The application cannot proceed due to a model loading failure.")
