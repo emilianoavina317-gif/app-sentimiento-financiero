@@ -97,7 +97,7 @@ st.title("📊 Terminal de Sentimiento Financiero")
 st.markdown("Analiza el sentimiento de las últimas noticias del mercado en tiempo real.")
 
 # Reemplaza esto con tu ruta real de Hugging Face
-ruta_de_tu_modelo = "tu-usuario/nombre-de-tu-modelo"
+ruta_de_tu_modelo = "JEAR317/finbert-sentimiento-diplomado"
 tokenizer, modelo = cargar_modelo_y_tokenizador(ruta_de_tu_modelo)
 
 if tokenizer and modelo:
