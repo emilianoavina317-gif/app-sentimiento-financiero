@@ -127,3 +127,71 @@ if tokenizer and modelo:
                         st.info(f"**[{noti['titulo']}]({noti['link']})** \n*🕒 {noti['fecha']}*")
 else:
     st.error("La aplicación no puede continuar debido a una falla al cargar el modelo.")
+# ==========================================
+# 4. INTERFAZ GRÁFICA DE USUARIO (UI)
+# ==========================================
+st.title("📊 Terminal de Sentimiento Financiero")
+st.markdown("Analiza el sentimiento de las últimas noticias del mercado en tiempo real.")
+
+# Recuerda poner aquí la ruta final de tu modelo en Hugging Face
+ruta_de_tu_modelo = "tu-usuario/nombre-de-tu-modelo" 
+tokenizer, modelo = cargar_modelo_y_tokenizador(ruta_de_tu_modelo)
+
+# Solo mostramos el buscador si el modelo cargó exitosamente
+if tokenizer and modelo:
+    
+    # Creamos dos columnas: una ancha (4) para el buscador y una estrecha (1) para el botón
+    col_search, col_btn = st.columns([4, 1])
+    
+    with col_search:
+        ticker_input = st.text_input("🔍 Ingresa un Ticker (Ej. AAPL, TSLA, MSFT):", "").upper()
+        
+    with col_btn:
+        # Agregamos espacios vacíos para que el botón se alinee verticalmente con la caja de texto
+        st.write("")
+        st.write("")
+        # Este botón forzará la recarga de la página al ser presionado
+        btn_actualizar = st.button("🔄 Actualizar Noticias")
+
+    # La lógica se ejecuta si el usuario escribió un ticker (ya sea al presionar Enter o dar clic al botón)
+    if ticker_input:
+        with st.spinner(f"Analizando el mercado para {ticker_input}..."):
+            
+            noticias = obtener_noticias_yahoo(ticker_input, limite=30)
+            
+            if not noticias:
+                st.warning(f"No se encontraron noticias recientes para el ticker {ticker_input}.")
+            else:
+                noticias_bearish = []
+                noticias_bullish = []
+                noticias_neutral = []
+                
+                for noticia in noticias:
+                    prediccion = clasificar_titular(noticia['titulo'], tokenizer, modelo)
+                    
+                    if prediccion == 0:
+                        noticias_bearish.append(noticia)
+                    elif prediccion == 1:
+                        noticias_bullish.append(noticia)
+                    else:
+                        noticias_neutral.append(noticia)
+                
+                st.markdown("---")
+                col_bear, col_bull, col_neut = st.columns(3)
+                
+                with col_bear:
+                    st.subheader("📉 Bearish")
+                    for noti in noticias_bearish[:3]:
+                        st.error(f"**[{noti['titulo']}]({noti['link']})** \n*🕒 {noti['fecha']}*")
+                        
+                with col_bull:
+                    st.subheader("📈 Bullish")
+                    for noti in noticias_bullish[:3]:
+                        st.success(f"**[{noti['titulo']}]({noti['link']})** \n*🕒 {noti['fecha']}*")
+                        
+                with col_neut:
+                    st.subheader("⚖️ Neutral")
+                    for noti in noticias_neutral[:3]:
+                        st.info(f"**[{noti['titulo']}]({noti['link']})** \n*🕒 {noti['fecha']}*")
+else:
+    st.error("La aplicación no puede continuar debido a una falla al cargar el modelo.")
